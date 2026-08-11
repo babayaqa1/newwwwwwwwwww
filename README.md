@@ -69,9 +69,10 @@ Sonra tarayıcıda aç: **http://localhost:4545**
 
 1. YouTube linkini yapıştır, **"Melumati al"**a bas.
 2. Video başlığı, uzunluğu ve önizlemesi görünür.
-3. **Başlangıç** ve **son** vaxtını yaz (numunə: `1:30` = 1 dəqiqə 30 saniyə).
-4. Keyfiyyəti seç — standart olaraq **Ən yüksək (avtomatik)**, yəni videonun mövcud ən yüksək keyfiyyəti (4K-a qədər).
-5. **"Kes ve yukle"**yə bas — parça kesilir ve bilgisayarına `.mp4` olarak inir.
+3. Zaman çizelgesinden aralık seç (veya `04:00-05:20` yaz), **"+ elave et"** ile listeye ekle. İstediğin kadar aralık ekleyebilirsin — hepsi **tek videoda birleşir**.
+4. **Video (mp4)** veya **Sadece səs (mp3)** seç.
+5. Keyfiyyəti seç — standart olaraq **Ən yüksək (avtomatik)** (4K-a qədər; mp3-də göstərilmir).
+6. **"Kes, birleshdir ve yukle"**yə bas. **Canlı yüzdə** göstərgesi ilerleyişi göstərir; bitince fayl (`.mp4` / `.mp3`) videonun **adıyla** bilgisayarına inir.
 
 ---
 

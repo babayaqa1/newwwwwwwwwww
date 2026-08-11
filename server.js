@@ -16,18 +16,22 @@ const PORT = process.env.PORT || 4545;
 // Hazir fayllar bura yigilir; her indirmeden sonra temizlenir.
 const TMP_ROOT = path.join(os.tmpdir(), 'yt-parca-kesici');
 
+// Ishlek ishler: jobId -> veziyyet. Canli faiz ucun SSE ile oxunur.
+const jobs = new Map();
+
 const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// --- Kicik komekci: prosesi ishe sal, cixishi topla -----------------------
+// --- Kicik komekci: prosesi ishe sal, cixishi topla, setir-setir izle ------
 // spawn massiv arqumentlerle chagirilir (shell yoxdur) — deye URL/vaxt kimi
 // istifadechi melumati komanda injection ucun tehlukeli deyil.
-function run(cmd, args, { timeoutMs = 0 } = {}) {
+function run(cmd, args, { timeoutMs = 0, onLine = null } = {}) {
   return new Promise((resolve, reject) => {
     const child = spawn(cmd, args);
     let stdout = '';
     let stderr = '';
+    let buf = '';
     let timer = null;
     if (timeoutMs > 0) {
       timer = setTimeout(() => {
@@ -35,7 +39,17 @@ function run(cmd, args, { timeoutMs = 0 } = {}) {
         reject(new Error(`Proses ${cmd} vaxt ashdi (${timeoutMs} ms)`));
       }, timeoutMs);
     }
-    child.stdout.on('data', (d) => { stdout += d; });
+    child.stdout.on('data', (d) => {
+      stdout += d;
+      if (onLine) {
+        buf += d;
+        let idx;
+        while ((idx = buf.indexOf('\n')) >= 0) {
+          onLine(buf.slice(0, idx));
+          buf = buf.slice(idx + 1);
+        }
+      }
+    });
     child.stderr.on('data', (d) => { stderr += d; });
     child.on('error', (err) => {
       if (timer) clearTimeout(timer);
@@ -63,6 +77,15 @@ function toTimestamp(seconds) {
   return `${hh}:${mm}:${ss}`;
 }
 
+// Fayl adi ucun tehlukesiz metn (basliqdan) — sistemde qadagan simvollari sil.
+function safeFileName(name) {
+  return String(name || '')
+    .replace(/[\\/:*?"<>|]/g, ' ') // Windows-de qadagan simvollar
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 80) || 'parca';
+}
+
 // --- Video haqqinda melumat -------------------------------------------------
 app.post('/api/info', async (req, res) => {
   const url = String(req.body?.url || '').trim();
@@ -86,118 +109,172 @@ app.post('/api/info', async (req, res) => {
   }
 });
 
-// Fayl adi ucun tehlukesiz metn (basliqdan) — sistemde qadagan simvollari sil.
-function safeFileName(name) {
-  return String(name || '')
-    .replace(/[\\/:*?"<>|]/g, ' ') // Windows-de qadagan simvollar
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, 80) || 'parca';
-}
-
-// --- Bir ve ya bir nece araligi kes, birleshdir ve qaytar -------------------
-app.post('/api/cut', async (req, res) => {
-  const url = String(req.body?.url || '').trim();
-  const quality = String(req.body?.quality || 'best'); // 'best' ya da maks hundurluk (piksel)
-  const title = safeFileName(req.body?.title);
-
-  if (!url) return res.status(400).json({ error: 'Link boshdur.' });
-
-  // Araliqlari topla: yeni format (segments massivi) ya da kohne (start/end).
-  let segments = Array.isArray(req.body?.segments) ? req.body.segments : null;
+// --- Araliqlari yoxla ve normallashdir --------------------------------------
+function parseSegments(body) {
+  let segments = Array.isArray(body?.segments) ? body.segments : null;
   if (!segments || segments.length === 0) {
-    const s = Number(req.body?.start);
-    const e = Number(req.body?.end);
+    const s = Number(body?.start);
+    const e = Number(body?.end);
     if (Number.isFinite(s) && Number.isFinite(e)) segments = [{ start: s, end: e }];
   }
-  if (!segments || segments.length === 0) {
-    return res.status(400).json({ error: 'En azi bir aralig secin.' });
-  }
-
-  // Her araligi yoxla.
+  if (!segments || segments.length === 0) return { error: 'En azi bir aralig secin.' };
   const clean = [];
   for (const seg of segments) {
     const s = Number(seg?.start);
     const e = Number(seg?.end);
     if (!Number.isFinite(s) || !Number.isFinite(e) || e <= s) {
-      return res.status(400).json({ error: 'Araliqlardan biri sehvdir (son > bashlangic olmalidir).' });
+      return { error: 'Araliqlardan biri sehvdir (son > bashlangic olmalidir).' };
     }
     clean.push({ start: s, end: e });
   }
+  return { segments: clean };
+}
+
+// --- Ishi bashlat: jobId qaytar, agir ishi arxada gor -----------------------
+app.post('/api/cut/start', async (req, res) => {
+  const url = String(req.body?.url || '').trim();
+  const quality = String(req.body?.quality || 'best');
+  const format = String(req.body?.format || 'video'); // 'video' | 'audio'
+  const title = safeFileName(req.body?.title);
+  if (!url) return res.status(400).json({ error: 'Link boshdur.' });
+
+  const parsed = parseSegments(req.body);
+  if (parsed.error) return res.status(400).json({ error: parsed.error });
+
+  const jobId = randomUUID();
+  jobs.set(jobId, { percent: 0, phase: 'hazirlanir', done: false, error: null, fileName: null, filePath: null, dir: null });
+  res.json({ jobId });
+
+  // Arxada ishle (cavabi gozletme).
+  processJob(jobId, { url, quality, format, title, segments: parsed.segments })
+    .catch((err) => {
+      const job = jobs.get(jobId);
+      if (job) { job.error = err.message; job.done = true; }
+    });
+});
+
+async function processJob(jobId, { url, quality, format, title, segments }) {
+  const job = jobs.get(jobId);
+  const isAudio = format === 'audio';
 
   const allowedHeights = new Set(['360', '480', '720', '1080', '1440', '2160']);
-  // 'best' -> hec bir hundurluk mehdudiyyeti qoyma, en yuksek mumkun keyfiyyet.
   const height = quality === 'best' ? null : (allowedHeights.has(quality) ? quality : null);
   const formatArg = height
     ? `bestvideo[height<=${height}]+bestaudio/best[height<=${height}]/best`
     : 'bestvideo*+bestaudio/best';
 
-  const jobDir = path.join(TMP_ROOT, randomUUID());
+  const jobDir = path.join(TMP_ROOT, jobId);
   await mkdir(jobDir, { recursive: true });
+  job.dir = jobDir;
 
-  try {
-    // 1) Her araligi ayrica endir.
-    const partFiles = [];
-    for (let i = 0; i < clean.length; i++) {
-      const { start, end } = clean[i];
-      const outTemplate = path.join(jobDir, `part${i}.%(ext)s`);
-      const args = [
-        '--no-playlist',
-        '--no-warnings',
-        '--download-sections', `*${toTimestamp(start)}-${toTimestamp(end)}`,
-        '--force-keyframes-at-cuts', // deqiq kesim (birleshmede uc-uca oturmesi ucun vacibdir)
-        '-f', formatArg,
-        '--merge-output-format', 'mp4',
-        '-o', outTemplate,
-        url,
-      ];
-      await run('yt-dlp', args, { timeoutMs: 15 * 60_000 });
-      const produced = (await readdir(jobDir)).filter((f) => f.startsWith(`part${i}.`));
-      if (produced.length === 0) throw new Error(`${i + 1}-ci parca yaradilmadi. Link ve vaxti yoxlayin.`);
-      partFiles.push(path.join(jobDir, produced[0]));
-    }
+  const n = segments.length;
+  const mergePhaseWeight = n > 1 ? 90 : 100; // birleshme varsa endirmeye 90% ayir
 
-    // 2) Tek parca -> birleshdirmeye ehtiyac yoxdur. Cox parca -> ffmpeg concat.
-    let finalPath;
-    if (partFiles.length === 1) {
-      finalPath = partFiles[0];
+  const partFiles = [];
+  for (let i = 0; i < n; i++) {
+    const { start, end } = segments[i];
+    job.phase = n > 1 ? `parca ${i + 1}/${n} endirilir` : (isAudio ? 'ses endirilir' : 'endirilir');
+
+    const outTemplate = path.join(jobDir, `part${i}.%(ext)s`);
+    const args = [
+      '--no-playlist',
+      '--no-warnings',
+      '--newline', // faiz setir-setir gelsin
+      '--download-sections', `*${toTimestamp(start)}-${toTimestamp(end)}`,
+    ];
+    if (isAudio) {
+      args.push('-f', 'bestaudio/best', '--extract-audio', '--audio-format', 'mp3', '--audio-quality', '0');
     } else {
-      // concat demuxer: fayl siyahisi. Windows-de yollar ucun / istifade edirik.
-      const listPath = path.join(jobDir, 'list.txt');
-      const listBody = partFiles
-        .map((p) => `file '${p.split(path.sep).join('/').replace(/'/g, "'\\''")}'`)
-        .join('\n');
-      await writeFile(listPath, listBody, 'utf8');
-
-      finalPath = path.join(jobDir, 'birlesmish.mp4');
-      try {
-        // Evvelce sur'etli yol: yeniden kodlashdirmadan yapishdir.
-        await run('ffmpeg', ['-y', '-f', 'concat', '-safe', '0', '-i', listPath, '-c', 'copy', finalPath],
-          { timeoutMs: 10 * 60_000 });
-      } catch {
-        // Kodeklerin uyghunsuzlugunda -c copy uzumur; ehtiyat: yeniden kodlashdir.
-        await run('ffmpeg', ['-y', '-f', 'concat', '-safe', '0', '-i', listPath,
-          '-c:v', 'libx264', '-c:a', 'aac', '-preset', 'veryfast', finalPath],
-          { timeoutMs: 25 * 60_000 });
-      }
+      // deqiq kesim (birleshmede uc-uca oturmesi ucun vacibdir)
+      args.push('--force-keyframes-at-cuts', '-f', formatArg, '--merge-output-format', 'mp4');
     }
+    args.push('-o', outTemplate, url);
 
-    // 3) Fayl adi: video basligi + parca sayi.
-    const ext = path.extname(finalPath) || '.mp4';
-    const suffix = clean.length > 1 ? `_${clean.length}parca` : '';
-    const safeName = `${title}${suffix}${ext}`;
-
-    res.download(finalPath, safeName, async (err) => {
-      // Gonderdikden sonra temizle (ugurlu ya ugursuz — fayllar qalmasin).
-      await rm(jobDir, { recursive: true, force: true }).catch(() => {});
-      if (err && !res.headersSent) {
-        res.status(500).json({ error: 'Fayl gonderilerken xeta.' });
-      }
+    await run('yt-dlp', args, {
+      timeoutMs: 15 * 60_000,
+      onLine: (line) => {
+        const m = line.match(/\[download\]\s+([\d.]+)%/);
+        if (m) {
+          const frac = Number(m[1]) / 100;
+          job.percent = Math.min(mergePhaseWeight, Math.round(((i + frac) / n) * mergePhaseWeight));
+        }
+      },
     });
-  } catch (err) {
-    await rm(jobDir, { recursive: true, force: true }).catch(() => {});
-    res.status(500).json({ error: err.message });
+
+    const produced = (await readdir(jobDir)).filter((f) => f.startsWith(`part${i}.`));
+    if (produced.length === 0) throw new Error(`${i + 1}-ci parca yaradilmadi. Link ve vaxti yoxlayin.`);
+    partFiles.push(path.join(jobDir, produced[0]));
+    job.percent = Math.round(((i + 1) / n) * mergePhaseWeight);
   }
+
+  // Birleshdir (cox parca) ya da birbasha ver (tek parca).
+  const ext = isAudio ? '.mp3' : '.mp4';
+  let finalPath;
+  if (partFiles.length === 1) {
+    finalPath = partFiles[0];
+  } else {
+    job.phase = 'birleshdirilir';
+    job.percent = Math.max(job.percent, 92);
+    const listPath = path.join(jobDir, 'list.txt');
+    const listBody = partFiles
+      .map((p) => `file '${p.split(path.sep).join('/').replace(/'/g, "'\\''")}'`)
+      .join('\n');
+    await writeFile(listPath, listBody, 'utf8');
+
+    finalPath = path.join(jobDir, `birlesmish${ext}`);
+    try {
+      // Sur'etli yol: yeniden kodlashdirmadan yapishdir.
+      await run('ffmpeg', ['-y', '-f', 'concat', '-safe', '0', '-i', listPath, '-c', 'copy', finalPath],
+        { timeoutMs: 10 * 60_000 });
+    } catch {
+      // Kodeklerin uyghunsuzlugunda -c copy uzumur; ehtiyat: yeniden kodlashdir.
+      const reArgs = isAudio
+        ? ['-y', '-f', 'concat', '-safe', '0', '-i', listPath, '-c:a', 'libmp3lame', '-q:a', '0', finalPath]
+        : ['-y', '-f', 'concat', '-safe', '0', '-i', listPath, '-c:v', 'libx264', '-c:a', 'aac', '-preset', 'veryfast', finalPath];
+      await run('ffmpeg', reArgs, { timeoutMs: 25 * 60_000 });
+    }
+  }
+
+  const suffix = n > 1 ? `_${n}parca` : '';
+  job.fileName = `${title}${suffix}${ext}`;
+  job.filePath = finalPath;
+  job.percent = 100;
+  job.phase = 'hazir';
+  job.done = true;
+}
+
+// --- Canli faiz (Server-Sent Events) ----------------------------------------
+app.get('/api/cut/stream/:id', (req, res) => {
+  const job = jobs.get(req.params.id);
+  if (!job) return res.status(404).end();
+  res.set({
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    Connection: 'keep-alive',
+  });
+  res.flushHeaders?.();
+  const send = () => {
+    res.write(`data: ${JSON.stringify({
+      percent: job.percent, phase: job.phase, done: job.done,
+      error: job.error, fileName: job.fileName,
+    })}\n\n`);
+  };
+  send();
+  const timer = setInterval(() => {
+    send();
+    if (job.done) { clearInterval(timer); res.end(); }
+  }, 400);
+  req.on('close', () => clearInterval(timer));
+});
+
+// --- Hazir fayli yukle, sonra temizle ---------------------------------------
+app.get('/api/cut/file/:id', (req, res) => {
+  const job = jobs.get(req.params.id);
+  if (!job || !job.filePath) return res.status(404).json({ error: 'Fayl hazir deyil.' });
+  res.download(job.filePath, job.fileName, async () => {
+    await rm(job.dir, { recursive: true, force: true }).catch(() => {});
+    jobs.delete(req.params.id);
+  });
 });
 
 // Server bashlayanda kohne temp qaliqlarini sil (evvelki cokme/dayanmadan).
