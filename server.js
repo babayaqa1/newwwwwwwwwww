@@ -4,7 +4,7 @@
 import express from 'express';
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { mkdir, readdir, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -135,6 +135,51 @@ app.post('/api/info', async (req, res) => {
       thumbnail: info.thumbnail || '',
       id: info.id || '',
     });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// "1:30" / "01:30" / "1:04:00" -> saniye (not fayli ucun)
+function parseTimeStr(str) {
+  const p = String(str).trim().split(':').map((x) => Number(x));
+  if (!p.length || p.some((n) => !Number.isFinite(n) || n < 0)) return NaN;
+  if (p.length === 1) return p[0];
+  if (p.length === 2) return p[0] * 60 + p[1];
+  if (p.length === 3) return p[0] * 3600 + p[1] * 60 + p[2];
+  return NaN;
+}
+
+// --- Not fayli: linki + araliqlari birbasha oxu -----------------------------
+// Istifadeci "dakkalar.txt" (ya da "not.txt") faylina yazir; app buradan oxuyur.
+const NOTE_FILES = ['dakkalar.txt', 'not.txt'];
+app.get('/api/notefile', async (req, res) => {
+  let file = null;
+  for (const n of NOTE_FILES) {
+    const p = path.join(__dirname, n);
+    if (existsSync(p)) { file = p; break; }
+  }
+  if (!file) {
+    return res.status(404).json({
+      error: 'Not fayli tapilmadi. "dakkalar.ornek.txt"-i "dakkalar.txt" adi ile kopyalayib link ve araliqlari ora yaz.',
+    });
+  }
+  try {
+    const text = await readFile(file, 'utf8');
+    let url = '';
+    const segments = [];
+    for (const raw of text.split(/\r?\n/)) {
+      const line = raw.trim();
+      if (!line || line.startsWith('#')) continue;       // bosh ya sherh setri
+      if (/^https?:\/\//i.test(line)) { url = line; continue; } // link setri
+      // aralig setri: "04:00-05:20"
+      const parts = line.split('-');
+      if (parts.length !== 2) continue;
+      const s = parseTimeStr(parts[0]);
+      const e = parseTimeStr(parts[1]);
+      if (Number.isFinite(s) && Number.isFinite(e) && e > s) segments.push({ start: s, end: e });
+    }
+    res.json({ url, segments });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

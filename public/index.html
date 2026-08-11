@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="az">
+<html lang="tr">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>YouTube Parca Kesici</title>
+  <title>YouTube Parça Kesici</title>
   <style>
     :root {
       --bg: #0f1115;
@@ -68,7 +68,6 @@
     .btn-ghost { background: var(--card-2); color: var(--text); border: 1px solid var(--line); width: 100%; }
     .btn-ghost:hover:not(:disabled) { border-color: var(--accent); }
 
-    /* Format sechici (Video / Ses) */
     .seg-toggle { display: flex; gap: 8px; }
     .seg-toggle button {
       flex: 1; background: var(--card-2); color: var(--muted);
@@ -85,7 +84,7 @@
     .hint { color: var(--muted); font-size: 12px; margin-top: 6px; }
     .section-title { font-size: 15px; font-weight: 700; margin: 0 0 16px; }
 
-    /* --- Zaman cizelgesi (iki tutamacli slayder) --- */
+    /* --- Zaman çizelgesi (iki tutamaçlı kaydırıcı) --- */
     .timeline { position: relative; height: 42px; margin: 6px 2px 0; }
     .timeline .base {
       position: absolute; top: 50%; left: 0; right: 0; height: 7px;
@@ -127,7 +126,7 @@
       font-weight: 700; font-variant-numeric: tabular-nums;
     }
 
-    /* --- Parca siyahisi --- */
+    /* --- Parça listesi --- */
     .seg-list { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
     .seg-item {
       display: flex; align-items: center; gap: 11px;
@@ -165,7 +164,7 @@
     }
     .seg-total b { color: var(--text); font-variant-numeric: tabular-nums; }
 
-    /* --- Ilerleme cubugu --- */
+    /* --- İlerleme çubuğu --- */
     .progress { margin-top: 16px; display: none; }
     .progress.show { display: block; }
     .progress .bar {
@@ -202,8 +201,8 @@
 <body>
   <div class="wrap">
     <header>
-      <div class="logo"><span class="play"></span> Parca Kesici</div>
-      <p>Videodan bir nece deqiqe araligi sec, birleshdir ve tek fayl kimi yukle</p>
+      <div class="logo"><span class="play"></span> Parça Kesici</div>
+      <p>Videodan istediğin dakika aralıklarını seç, birleştir ve tek dosya olarak indir</p>
     </header>
 
     <!-- 1. Link -->
@@ -212,10 +211,10 @@
       <input type="text" id="url" placeholder="https://www.youtube.com/watch?v=..." autocomplete="off" />
 
       <div style="margin-top:12px;">
-        <label for="browser">Brauzer cookie-leri <span style="font-weight:400;">(YouTube "bot deyilsen" xetasi ucun)</span></label>
+        <label for="browser">Tarayıcı çerezleri <span style="font-weight:400;">(YouTube "bot değilsin" hatası için)</span></label>
         <select id="browser">
-          <option value="">Yoxdur (evvelce sina)</option>
-          <option value="file">cookies.txt fayli (tovsiye)</option>
+          <option value="">Yok (önce dene)</option>
+          <option value="file">cookies.txt dosyası (önerilen)</option>
           <option value="firefox">Firefox</option>
           <option value="chrome">Chrome</option>
           <option value="edge">Edge</option>
@@ -223,33 +222,34 @@
           <option value="opera">Opera</option>
         </select>
         <div class="hint">
-          YouTube bot yoxlamasi verirse cookie lazimdir. <b>Chrome/Edge</b> secsen brauzer <b>tam bagli</b> olmalidir (yoxsa "cookie database" xetasi).
-          En etibarli yol: <b>cookies.txt</b> — "Get cookies.txt LOCALLY" eklentisi ile ixrac edib faili proqram qovlugna qoy.
+          YouTube bot kontrolü verirse çerez gerekir. <b>Chrome/Edge</b> seçersen tarayıcı <b>tamamen kapalı</b> olmalı (yoksa "cookie database" hatası).
+          En sağlamı: <b>cookies.txt</b> — "Get cookies.txt LOCALLY" eklentisiyle dışa aktarıp dosyayı proje klasörüne koy.
         </div>
       </div>
 
-      <button class="btn-ghost" id="infoBtn" style="margin-top:12px;">Melumati al</button>
+      <button class="btn-ghost" id="infoBtn" style="margin-top:12px;">Bilgiyi al</button>
+      <button class="btn-ghost" id="noteBtn" style="margin-top:8px;">📄 Not dosyasından al (dakkalar.txt)</button>
       <div class="status" id="infoStatus"></div>
 
       <div class="info" id="infoBox" style="margin-top:14px;">
         <img id="thumb" alt="" />
         <div>
           <h3 id="vidTitle"></h3>
-          <div class="meta"><span id="vidUploader"></span> · Uzunluq: <span id="vidDuration"></span></div>
+          <div class="meta"><span id="vidUploader"></span> · Süre: <span id="vidDuration"></span></div>
         </div>
       </div>
     </div>
 
-    <!-- 2. Aralig sec + siyahi -->
+    <!-- 2. Aralık seç + liste -->
     <div class="card" id="cutCard" style="opacity:.5; pointer-events:none;">
-      <div class="section-title">Aralig sec — <span class="tl-badge" id="rangeBadge">00:00 – 01:00</span></div>
+      <div class="section-title">Aralık seç — <span class="tl-badge" id="rangeBadge">00:00 – 01:00</span></div>
 
-      <!-- Zaman cizelgesi -->
+      <!-- Zaman çizelgesi -->
       <div class="timeline" id="timeline">
         <div class="base"></div>
         <div class="range" id="rangeFill"></div>
-        <input type="range" id="startRange" min="0" max="60" value="0" step="1" aria-label="Bashlangic" />
-        <input type="range" id="endRange" min="0" max="60" value="60" step="1" aria-label="Son" />
+        <input type="range" id="startRange" min="0" max="60" value="0" step="1" aria-label="Başlangıç" />
+        <input type="range" id="endRange" min="0" max="60" value="60" step="1" aria-label="Bitiş" />
       </div>
       <div class="tl-labels">
         <span>0:00</span>
@@ -258,36 +258,36 @@
 
       <!-- Elle yazma -->
       <div style="margin-top:16px;">
-        <label for="rangeInput">Ve ya elle yaz</label>
+        <label for="rangeInput">Veya elle yaz</label>
         <input type="text" id="rangeInput" placeholder="04:00-05:20" value="00:00-01:00" />
-        <div class="hint">Format: <b>bashlangic-son</b>, numune: <b>04:00-05:20</b>. Saat ucun: <b>1:04:00-1:05:20</b>.</div>
+        <div class="hint">Biçim: <b>başlangıç-bitiş</b>, örnek: <b>04:00-05:20</b>. Saat için: <b>1:04:00-1:05:20</b>.</div>
       </div>
 
-      <button class="btn-ghost" id="addBtn" style="margin-top:14px;">+  Araligi listeye elave et</button>
+      <button class="btn-ghost" id="addBtn" style="margin-top:14px;">+  Aralığı listeye ekle</button>
 
-      <!-- Elave edilen parcalar -->
+      <!-- Eklenen parçalar -->
       <div class="seg-list" id="segList">
-        <div class="seg-empty" id="segEmpty">Hele parca elave edilmeyib. Yuxaridan aralig secib <b>+</b> bas.</div>
+        <div class="seg-empty">Henüz parça eklenmedi. Yukarıdan aralık seçip <b>+</b> bas.</div>
       </div>
       <div class="seg-total hidden" id="segTotal">
-        <span id="segCount">0 parca</span>
-        <span>Umumi: <b id="segDurSum">0:00</b></span>
+        <span id="segCount">0 parça</span>
+        <span>Toplam: <b id="segDurSum">0:00</b></span>
       </div>
 
       <!-- Format: Video / Ses -->
       <div style="margin-top:18px;">
-        <label>Ne yuklensin?</label>
+        <label>Ne indirilsin?</label>
         <div class="seg-toggle">
           <button type="button" id="fmtVideo" class="active" data-fmt="video">🎬 Video (mp4)</button>
           <button type="button" id="fmtAudio" data-fmt="audio">🎵 Sadece ses (mp3)</button>
         </div>
       </div>
 
-      <!-- Keyfiyyet (yalniz video ucun) -->
+      <!-- Kalite (yalnız video için) -->
       <div style="margin-top:16px;" id="qualityWrap">
-        <label for="quality">Keyfiyyet</label>
+        <label for="quality">Kalite</label>
         <select id="quality">
-          <option value="best" selected>Ən yüksək (avtomatik)</option>
+          <option value="best" selected>En yüksek (otomatik)</option>
           <option value="2160">2160p (4K)</option>
           <option value="1440">1440p (2K)</option>
           <option value="1080">1080p (Full HD)</option>
@@ -297,42 +297,42 @@
         </select>
       </div>
 
-      <button class="btn-primary" id="cutBtn" style="margin-top:18px;">Kes, birleshdir ve yukle</button>
+      <button class="btn-primary" id="cutBtn" style="margin-top:18px;">Kes, birleştir ve indir</button>
 
-      <!-- Canli ilerleme -->
+      <!-- Canlı ilerleme -->
       <div class="progress" id="progress">
         <div class="bar"><div class="fill" id="progFill"></div></div>
-        <div class="ptext"><span id="progPhase">hazirlanir…</span><b id="progPct">0%</b></div>
+        <div class="ptext"><span id="progPhase">hazırlanıyor…</span><b id="progPct">0%</b></div>
       </div>
 
       <div class="status" id="cutStatus"></div>
     </div>
 
     <footer>
-      Alet lokal ishleyir — fayllar oz kompyuterine yuklenir.<br />
-      Yalniz oz kontentin ya da icaze verilen videolarla istifade et.
+      Araç yerel çalışır — dosyalar kendi bilgisayarına iner.<br />
+      Yalnızca kendi içeriğin ya da izinli videolarla kullan.
     </footer>
   </div>
 
   <script>
     const $ = (id) => document.getElementById(id);
 
-    // Veziyyet
+    // Durum
     let videoDuration = 60; // saniye
     let videoTitle = 'parca';
     let startSec = 0;
     let endSec = 60;
     let segments = [];       // [{start, end}]
-    let segUrl = '';         // segments hansi linke aiddir
+    let segUrl = '';         // parçalar hangi linke ait
     let format = 'video';    // 'video' | 'audio'
-    let editIndex = -1;      // hansi parca duzenlenir (-1 = hec biri)
+    let editIndex = -1;      // hangi parça düzenleniyor (-1 = hiçbiri)
 
-    // Sechilen araliqlar brauzerde saxlanir — sehife baglanib acilsa da qalir.
+    // Seçilen aralıklar tarayıcıda saklanır — sayfa kapanıp açılsa da kalır.
     const STORE = 'yt-parca-kesici';
     function save() {
       try {
         localStorage.setItem(STORE, JSON.stringify({ url: $('url').value.trim(), segUrl, segments }));
-      } catch (e) { /* localStorage bloklanibsa problem deyil */ }
+      } catch (e) { /* localStorage engelliyse sorun değil */ }
     }
     function load() {
       try {
@@ -345,7 +345,7 @@
           segUrl = d.segUrl || '';
           renderList();
         }
-      } catch (e) { /* xarab data — burax */ }
+      } catch (e) { /* bozuk veri — bırak */ }
     }
 
     // "1:30" / "01:30" / "1:04:00" -> saniye
@@ -366,7 +366,7 @@
       return h > 0 ? `${h}:${p(m)}:${p(s)}` : `${p(m)}:${p(s)}`;
     }
 
-    // --- Slayder + badge + elle-input yenile ---
+    // --- Kaydırıcı + rozet + elle-input güncelle ---
     function render({ skipInput = false } = {}) {
       const sr = $('startRange'), er = $('endRange');
       sr.max = er.max = videoDuration;
@@ -391,17 +391,17 @@
     $('startRange').addEventListener('input', () => onSlide('start'));
     $('endRange').addEventListener('input', () => onSlide('end'));
 
-    // Elle "04:00-05:20"; qaytarir: true = ugurlu
+    // Elle "04:00-05:20"; döndürür: true = başarılı
     function applyTextRange({ silent = false } = {}) {
       const raw = $('rangeInput').value.trim();
       const st = $('cutStatus');
       const err = (m) => { if (!silent) { st.className = 'status err'; st.textContent = m; } return false; };
       const parts = raw.split('-');
-      if (parts.length !== 2) return err('Format sehvdir. Numune: 04:00-05:20');
+      if (parts.length !== 2) return err('Biçim yanlış. Örnek: 04:00-05:20');
       const s = parseTime(parts[0]);
       const e = parseTime(parts[1]);
-      if (!Number.isFinite(s) || !Number.isFinite(e)) return err('Vaxt sehvdir. Numune: 04:00-05:20');
-      if (e <= s) return err('Son vaxt bashlangicdan boyuk olmalidir.');
+      if (!Number.isFinite(s) || !Number.isFinite(e)) return err('Zaman yanlış. Örnek: 04:00-05:20');
+      if (e <= s) return err('Bitiş zamanı başlangıçtan büyük olmalı.');
       startSec = Math.min(Math.max(0, s), Math.max(0, videoDuration - 1));
       endSec = Math.min(e, videoDuration);
       if (!silent) { st.className = 'status'; st.textContent = ''; }
@@ -411,24 +411,23 @@
     $('rangeInput').addEventListener('change', () => applyTextRange());
     $('rangeInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') applyTextRange(); });
 
-    // --- Format sechici ---
+    // --- Format seçici ---
     function setFormat(f) {
       format = f;
       $('fmtVideo').classList.toggle('active', f === 'video');
       $('fmtAudio').classList.toggle('active', f === 'audio');
-      // mp3-de keyfiyyet (video hundurluyu) menasizdir — gizle.
       $('qualityWrap').style.display = f === 'audio' ? 'none' : 'block';
-      $('cutBtn').textContent = f === 'audio' ? 'Kes, birleshdir ve mp3 yukle' : 'Kes, birleshdir ve yukle';
+      $('cutBtn').textContent = f === 'audio' ? 'Kes, birleştir ve mp3 indir' : 'Kes, birleştir ve indir';
     }
     $('fmtVideo').addEventListener('click', () => setFormat('video'));
     $('fmtAudio').addEventListener('click', () => setFormat('audio'));
 
-    // --- Parca siyahisi ---
+    // --- Parça listesi ---
     function renderList() {
       const list = $('segList');
       list.innerHTML = '';
       if (segments.length === 0) {
-        list.innerHTML = '<div class="seg-empty">Hele parca elave edilmeyib. Yuxaridan aralig secib <b>+</b> bas.</div>';
+        list.innerHTML = '<div class="seg-empty">Henüz parça eklenmedi. Yukarıdan aralık seçip <b>+</b> bas.</div>';
         $('segTotal').classList.add('hidden');
         editIndex = -1;
         return;
@@ -439,36 +438,32 @@
         const row = document.createElement('div');
         row.className = 'seg-item';
         if (i === editIndex) {
-          // Duzenleme modu: vaxti satirda deyish
+          // Düzenleme modu: zamanı satırda değiştir
           row.innerHTML =
             `<span class="num">${i + 1}</span>` +
             `<input type="text" class="edit-in" value="${fmt(seg.start)}-${fmt(seg.end)}" />` +
-            `<button class="ok" title="Yadda saxla" data-ok="${i}">✓</button>` +
-            `<button class="del" title="Legv et" data-cancel="1">×</button>`;
+            `<button class="ok" title="Kaydet" data-ok="${i}">✓</button>` +
+            `<button class="del" title="İptal" data-cancel="1">×</button>`;
         } else {
           row.innerHTML =
             `<span class="num">${i + 1}</span>` +
             `<span class="time">${fmt(seg.start)} – ${fmt(seg.end)}</span>` +
             `<span class="dur">${fmt(seg.end - seg.start)}</span>` +
-            `<button class="edit" title="Duzenle" data-edit="${i}">✎</button>` +
+            `<button class="edit" title="Düzenle" data-edit="${i}">✎</button>` +
             `<button class="del" title="Sil" data-i="${i}">×</button>`;
         }
         list.appendChild(row);
       });
 
-      // Duzenle
       list.querySelectorAll('.edit').forEach((b) =>
         b.addEventListener('click', () => { editIndex = Number(b.dataset.edit); renderList(); }));
-      // Yadda saxla
       list.querySelectorAll('.ok').forEach((b) =>
         b.addEventListener('click', () => saveEdit(Number(b.dataset.ok))));
-      // Sil / legv et
       list.querySelectorAll('.del').forEach((b) =>
         b.addEventListener('click', () => {
           if (b.dataset.cancel) { editIndex = -1; renderList(); return; }
           segments.splice(Number(b.dataset.i), 1); editIndex = -1; renderList(); save();
         }));
-      // Duzenleme inputuna fokus + Enter/Escape
       const inp = list.querySelector('.edit-in');
       if (inp) {
         inp.focus();
@@ -480,21 +475,21 @@
       }
 
       $('segTotal').classList.remove('hidden');
-      $('segCount').textContent = `${segments.length} parca`;
+      $('segCount').textContent = `${segments.length} parça`;
       $('segDurSum').textContent = fmt(total);
     }
 
-    // Duzenleme modunda vaxti yadda saxla
+    // Düzenleme modunda zamanı kaydet
     function saveEdit(i) {
       const inp = $('segList').querySelector('.edit-in');
       const st = $('cutStatus');
       if (!inp) return;
       const parts = inp.value.trim().split('-');
-      if (parts.length !== 2) { st.className = 'status err'; st.textContent = 'Format sehvdir. Numune: 04:00-05:20'; return; }
+      if (parts.length !== 2) { st.className = 'status err'; st.textContent = 'Biçim yanlış. Örnek: 04:00-05:20'; return; }
       const s = parseTime(parts[0]);
       const e = parseTime(parts[1]);
       if (!Number.isFinite(s) || !Number.isFinite(e) || e <= s) {
-        st.className = 'status err'; st.textContent = 'Vaxt sehvdir. Numune: 04:00-05:20'; return;
+        st.className = 'status err'; st.textContent = 'Zaman yanlış. Örnek: 04:00-05:20'; return;
       }
       let ss = Math.max(0, s), ee = e;
       if (videoDuration) { ss = Math.min(ss, videoDuration - 1); ee = Math.min(ee, videoDuration); }
@@ -502,7 +497,7 @@
       editIndex = -1;
       renderList();
       save();
-      st.className = 'status ok'; st.textContent = 'Deyishiklik yadda saxlanildi.';
+      st.className = 'status ok'; st.textContent = 'Değişiklik kaydedildi.';
     }
 
     $('addBtn').addEventListener('click', () => {
@@ -514,15 +509,15 @@
       save();
       const st = $('cutStatus');
       st.className = 'status ok';
-      st.textContent = `Elave edildi: ${fmt(startSec)} – ${fmt(endSec)}`;
+      st.textContent = `Eklendi: ${fmt(startSec)} – ${fmt(endSec)}`;
     });
 
-    // --- Melumat al ---
-    $('infoBtn').addEventListener('click', async () => {
+    // --- Bilgiyi al ---
+    async function fetchInfo() {
       const url = $('url').value.trim();
       const st = $('infoStatus');
-      if (!url) { st.className = 'status err'; st.textContent = 'Zehmet olmasa link yaz.'; return; }
-      st.className = 'status load'; st.innerHTML = 'Yuklenir <span class="spinner"></span>';
+      if (!url) { st.className = 'status err'; st.textContent = 'Lütfen link yaz.'; return false; }
+      st.className = 'status load'; st.innerHTML = 'Yükleniyor <span class="spinner"></span>';
       $('infoBtn').disabled = true;
       try {
         const r = await fetch('/api/info', {
@@ -530,13 +525,13 @@
           body: JSON.stringify({ url, browser: $('browser').value }),
         });
         const data = await r.json();
-        if (!r.ok) throw new Error(data.error || 'Xeta');
+        if (!r.ok) throw new Error(data.error || 'Hata');
 
         videoDuration = Math.max(1, data.duration || 1);
         videoTitle = data.title || 'parca';
         startSec = 0;
         endSec = Math.min(60, videoDuration);
-        // Ferqli video secilibse siyahini temizle; eyni videodursa saxlanmish parcalar qalsin.
+        // Farklı video seçildiyse listeyi temizle; aynı videoysa saklanan parçalar kalsın.
         if (segUrl !== url) { segments = []; segUrl = url; }
         save();
 
@@ -552,16 +547,53 @@
         render();
         renderList();
 
-        st.className = 'status ok'; st.textContent = 'Hazirdir. Indi araliqlari sec ve elave et.';
+        st.className = 'status ok'; st.textContent = 'Hazır. Şimdi aralıkları seç ve ekle.';
+        return true;
       } catch (e) {
-        st.className = 'status err'; st.textContent = 'Xeta: ' + e.message;
+        st.className = 'status err'; st.textContent = 'Hata: ' + e.message;
         $('infoBox').classList.remove('show');
+        return false;
       } finally {
         $('infoBtn').disabled = false;
       }
+    }
+    $('infoBtn').addEventListener('click', fetchInfo);
+
+    // --- Not dosyasından al (dakkalar.txt): link + aralıkları direkt yükle ---
+    $('noteBtn').addEventListener('click', async () => {
+      const st = $('infoStatus');
+      st.className = 'status load'; st.innerHTML = 'Not dosyası okunuyor <span class="spinner"></span>';
+      $('noteBtn').disabled = true;
+      try {
+        const r = await fetch('/api/notefile');
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Hata');
+        if (data.url) $('url').value = data.url;
+        // Linkin bilgisini al (video süresi, başlık için)
+        const ok = await fetchInfo();
+        if (ok === false) return;
+        // Sonra dosyadaki aralıkları yükle
+        if (Array.isArray(data.segments) && data.segments.length) {
+          segments = data.segments.slice();
+          segUrl = $('url').value.trim();
+          renderList();
+          save();
+          const cs = $('cutStatus');
+          cs.className = 'status ok';
+          cs.textContent = `${segments.length} aralık not dosyasından yüklendi. Şimdi "Kes, birleştir ve indir" bas.`;
+        } else {
+          const cs = $('cutStatus');
+          cs.className = 'status err';
+          cs.textContent = 'Not dosyasında aralık bulunamadı (örnek: 04:00-05:20).';
+        }
+      } catch (e) {
+        st.className = 'status err'; st.textContent = 'Not dosyası: ' + e.message;
+      } finally {
+        $('noteBtn').disabled = false;
+      }
     });
 
-    // Ilerleme cubugunu yenile
+    // İlerleme çubuğunu güncelle
     function setProgress(pct, phase, done = false) {
       $('progress').classList.add('show');
       $('progFill').style.width = Math.max(0, Math.min(100, pct)) + '%';
@@ -570,7 +602,21 @@
       $('progPhase').textContent = phase || '';
     }
 
-    // --- Kes, birleshdir ve yukle (canli faiz ile) ---
+    // Sunucu aşama adlarını (Az) Türkçe göster
+    function phaseText(p) {
+      const map = {
+        hazirlanir: 'hazırlanıyor…',
+        endirilir: 'indiriliyor…',
+        'ses endirilir': 'ses indiriliyor…',
+        birleshdirilir: 'birleştiriliyor…',
+        hazir: 'hazır!',
+      };
+      if (map[p]) return map[p];
+      // "parca 2/3 endirilir" gibi dinamik metinler
+      return String(p).replace('parca', 'parça').replace('endirilir', 'indiriliyor') + '…';
+    }
+
+    // --- Kes, birleştir ve indir (canlı yüzde ile) ---
     $('cutBtn').addEventListener('click', async () => {
       const url = $('url').value.trim();
       const st = $('cutStatus');
@@ -581,48 +627,41 @@
         if (endSec > startSec) toCut = [{ start: startSec, end: endSec }];
       }
       if (toCut.length === 0) {
-        st.className = 'status err'; st.textContent = 'En azi bir aralig elave et (+ dugmesi).'; return;
+        st.className = 'status err'; st.textContent = 'En az bir aralık ekle (+ düğmesi).'; return;
       }
 
       $('cutBtn').disabled = true;
       st.className = 'status'; st.textContent = '';
-      setProgress(0, 'hazirlanir…');
+      setProgress(0, 'hazırlanıyor…');
 
       try {
-        // 1) Ishi bashlat
         const r = await fetch('/api/cut/start', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ url, segments: toCut, quality: $('quality').value, format, title: videoTitle, browser: $('browser').value }),
         });
         const data = await r.json();
-        if (!r.ok) throw new Error(data.error || 'Server xetasi');
+        if (!r.ok) throw new Error(data.error || 'Sunucu hatası');
         const jobId = data.jobId;
 
-        // 2) Canli faizi izle (SSE)
         await new Promise((resolve, reject) => {
           const es = new EventSource(`/api/cut/stream/${jobId}`);
           es.onmessage = (ev) => {
             const j = JSON.parse(ev.data);
-            const phaseText = {
-              hazirlanir: 'hazirlanir…', endirilir: 'endirilir…',
-              'ses endirilir': 'ses endirilir…', birleshdirilir: 'birleshdirilir…', hazir: 'hazir!',
-            }[j.phase] || (j.phase + '…');
-            setProgress(j.percent, phaseText, j.done && !j.error);
+            setProgress(j.percent, phaseText(j.phase), j.done && !j.error);
             if (j.error) { es.close(); reject(new Error(j.error)); return; }
             if (j.done) { es.close(); resolve(); }
           };
-          es.onerror = () => { es.close(); reject(new Error('Baglanti kesildi.')); };
+          es.onerror = () => { es.close(); reject(new Error('Bağlantı kesildi.')); };
         });
 
-        // 3) Hazir fayli yukle (link ile — sehife deyishmir)
         const a = document.createElement('a');
         a.href = `/api/cut/file/${jobId}`;
         document.body.appendChild(a); a.click(); a.remove();
 
         st.className = 'status ok';
-        st.textContent = toCut.length > 1 ? 'Hazirdir! Butun parcalar tek faylda yuklendi.' : 'Hazirdir! Fayl yuklendi.';
+        st.textContent = toCut.length > 1 ? 'Hazır! Tüm parçalar tek dosyada indi.' : 'Hazır! Dosya indi.';
       } catch (e) {
-        st.className = 'status err'; st.textContent = 'Xeta: ' + e.message;
+        st.className = 'status err'; st.textContent = 'Hata: ' + e.message;
         $('progress').classList.remove('show');
       } finally {
         $('cutBtn').disabled = false;
@@ -633,7 +672,7 @@
 
     setFormat('video');
     render();
-    load(); // saxlanmish link ve araliqlari geri getir
+    load(); // saklanan link ve aralıkları geri getir
   </script>
 </body>
 </html>

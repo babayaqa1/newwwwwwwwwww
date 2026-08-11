@@ -4,4 +4,6 @@ node_modules/
 *.webm
 *.part
 cookies.txt
+dakkalar.txt
+not.txt
 .DS_Store

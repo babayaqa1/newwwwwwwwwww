@@ -1,0 +1,19 @@
+# YouTube Parça Kesici — not dosyası (örnek)
+#
+# KULLANIM: Bu dosyanın adını "dakkalar.txt" yap (bunu kopyala, adını değiştir).
+# Sonra uygulamada "Not dosyasından al" düğmesine bas — link ve aralıklar
+# doğrudan yüklenir.
+#
+# KURALLAR:
+#  - "#" ile başlayan satırlar açıklamadır, dikkate alınmaz.
+#  - Link satırı (isteğe bağlı): https ile başlayan bir satır.
+#  - Her aralık ayrı satırda: BAŞLANGIÇ-BİTİŞ  (örnek: 04:00-05:20)
+#  - Saat için: 1:04:00-1:05:20
+#
+# ---- aşağısını kendi linkin ve dakikalarınla değiştir ----
+
+https://youtu.be/h5pTl8fOM2U
+
+01:04-02:27
+05:00-06:30
+10:15-11:00

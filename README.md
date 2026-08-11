@@ -93,6 +93,18 @@ Bundan sonra: **sadece `BASLAT.bat`'a çift tıkla.** İçindeki `git pull` en s
 
 ---
 
+## Not dosyası ile hızlı yükleme (dakkalar.txt)
+
+Aralıkları her seferinde elle yazmak yerine bir metin dosyasına yazıp tek düğmeyle yükleyebilirsin:
+
+1. `dakkalar.ornek.txt` dosyasını kopyalayıp adını **`dakkalar.txt`** yap.
+2. İçine linki ve aralıkları yaz (her aralık ayrı satırda, örn. `04:00-05:20`).
+3. Uygulamada **"📄 Not dosyasından al"** düğmesine bas — link ve tüm aralıklar direkt yüklenir.
+
+(`dakkalar.txt` kişiseldir, git'e gönderilmez.)
+
+---
+
 ## Qeydlər
 
 - İlk kez ağır/uzun bir aralık biraz sürebilir (yt-dlp `--force-keyframes-at-cuts` ile tam noktadan keser).
