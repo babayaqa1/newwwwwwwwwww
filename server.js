@@ -77,12 +77,26 @@ function toTimestamp(seconds) {
   return `${hh}:${mm}:${ss}`;
 }
 
-// YouTube "bot deyilsen tesdiqle" xetasi ucun: brauzerdeki cookie-leri istifade et.
-// Yalniz tehlukesiz siyahidan brauzer adini qebul edirik (komanda injection olmasin).
+// YouTube "bot deyilsen tesdiqle" xetasi ucun: cookie-leri istifade et.
+// Iki yol: (1) brauzerden birbasha, (2) qovluqa qoyulan cookies.txt fayli.
+// Chrome/Edge acikdirsa cookie DB kilidli olur (#7271) — cookies.txt bu problemi hell edir.
 const ALLOWED_BROWSERS = new Set(['chrome', 'edge', 'firefox', 'brave', 'opera', 'chromium', 'vivaldi', 'safari']);
-function cookieArgs(browser) {
-  const b = String(browser || '').trim().toLowerCase();
-  return ALLOWED_BROWSERS.has(b) ? ['--cookies-from-browser', b] : [];
+const COOKIES_FILE = path.join(__dirname, 'cookies.txt');
+
+function authArgs(sel) {
+  const s = String(sel || '').trim().toLowerCase();
+  if (s === 'file') {
+    return existsSync(COOKIES_FILE) ? ['--cookies', COOKIES_FILE] : [];
+  }
+  return ALLOWED_BROWSERS.has(s) ? ['--cookies-from-browser', s] : [];
+}
+
+// Fayl secilib amma yoxdursa aydin mesaj qaytar (yoxsa yene bot xetasi alinar).
+function authError(sel) {
+  if (String(sel || '').trim().toLowerCase() === 'file' && !existsSync(COOKIES_FILE)) {
+    return 'cookies.txt tapilmadi. "Get cookies.txt LOCALLY" brauzer eklentisi ile ixrac edib, faili proqram qovlugna (server.js yaninda) "cookies.txt" adi ile qoy.';
+  }
+  return null;
 }
 
 // Fayl adi ucun tehlukesiz metn (basliqdan) — sistemde qadagan simvollari sil.
@@ -98,10 +112,12 @@ function safeFileName(name) {
 app.post('/api/info', async (req, res) => {
   const url = String(req.body?.url || '').trim();
   if (!url) return res.status(400).json({ error: 'Link boshdur.' });
+  const authErr = authError(req.body?.browser);
+  if (authErr) return res.status(400).json({ error: authErr });
   try {
     const { stdout } = await run(
       'yt-dlp',
-      ['--dump-single-json', '--no-playlist', '--no-warnings', ...cookieArgs(req.body?.browser), url],
+      ['--dump-single-json', '--no-playlist', '--no-warnings', ...authArgs(req.body?.browser), url],
       { timeoutMs: 60_000 },
     );
     const info = JSON.parse(stdout);
@@ -146,6 +162,8 @@ app.post('/api/cut/start', async (req, res) => {
   const title = safeFileName(req.body?.title);
   const browser = req.body?.browser;
   if (!url) return res.status(400).json({ error: 'Link boshdur.' });
+  const authErr = authError(browser);
+  if (authErr) return res.status(400).json({ error: authErr });
 
   const parsed = parseSegments(req.body);
   if (parsed.error) return res.status(400).json({ error: parsed.error });
@@ -165,7 +183,7 @@ app.post('/api/cut/start', async (req, res) => {
 async function processJob(jobId, { url, quality, format, title, browser, segments }) {
   const job = jobs.get(jobId);
   const isAudio = format === 'audio';
-  const cookies = cookieArgs(browser);
+  const cookies = authArgs(browser);
 
   const allowedHeights = new Set(['360', '480', '720', '1080', '1440', '2160']);
   const height = quality === 'best' ? null : (allowedHeights.has(quality) ? quality : null);

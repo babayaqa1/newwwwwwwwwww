@@ -3,4 +3,5 @@ node_modules/
 *.mkv
 *.webm
 *.part
+cookies.txt
 .DS_Store

@@ -203,13 +203,17 @@
         <label for="browser">Brauzer cookie-leri <span style="font-weight:400;">(YouTube "bot deyilsen" xetasi ucun)</span></label>
         <select id="browser">
           <option value="">Yoxdur (evvelce sina)</option>
+          <option value="file">cookies.txt fayli (tovsiye)</option>
+          <option value="firefox">Firefox</option>
           <option value="chrome">Chrome</option>
           <option value="edge">Edge</option>
-          <option value="firefox">Firefox</option>
           <option value="brave">Brave</option>
           <option value="opera">Opera</option>
         </select>
-        <div class="hint">YouTube bot yoxlamasi verirse, YouTube-a giris etdiyin brauzeri sec. Chrome/Edge-de bezen brauzeri <b>tam bagli</b> olmalidir.</div>
+        <div class="hint">
+          YouTube bot yoxlamasi verirse cookie lazimdir. <b>Chrome/Edge</b> secsen brauzer <b>tam bagli</b> olmalidir (yoxsa "cookie database" xetasi).
+          En etibarli yol: <b>cookies.txt</b> — "Get cookies.txt LOCALLY" eklentisi ile ixrac edib faili proqram qovlugna qoy.
+        </div>
       </div>
 
       <button class="btn-ghost" id="infoBtn" style="margin-top:12px;">Melumati al</button>

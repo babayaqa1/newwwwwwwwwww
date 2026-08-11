@@ -80,7 +80,9 @@ Sonra tarayıcıda aç: **http://localhost:4545**
 
 - İlk kez ağır/uzun bir aralık biraz sürebilir (yt-dlp `--force-keyframes-at-cuts` ile tam noktadan keser).
 - Bazı videolar bölge/yaş kısıtlamalı olabilir; o zaman yt-dlp indiremez.
-- **"Sign in to confirm you're not a bot" hatası** alırsan: sayfadaki **"Brauzer cookie-leri"** menüsünden YouTube'a giriş yaptığın tarayıcıyı (Chrome/Edge/Firefox…) seç. Araç o tarayıcının çerezleriyle indirir. Chrome/Edge'de bazen tarayıcının **tamamen kapalı** olması gerekir (çerez dosyası kilitli olmasın).
+- **"Sign in to confirm you're not a bot" hatası** alırsan çerez lazım. İki yol:
+  - **Kolay ama kırılgan:** menüden tarayıcını seç (Firefox en sorunsuzu). Chrome/Edge seçersen tarayıcı **tamamen kapalı** olmalı, yoksa `Could not copy Chrome cookie database` hatası gelir (Chrome çerez dosyasını kilitler).
+  - **En sağlam (tavsiye): `cookies.txt`** — tarayıcına **"Get cookies.txt LOCALLY"** eklentisini kur, `youtube.com` açıkken eklentiden **Export** de, inen `cookies.txt` dosyasını proje klasörüne (`server.js`'in yanına) koy. Sonra menüden **"cookies.txt fayli"**ni seç. Bu yöntem tarayıcının açık/kapalı olmasından etkilenmez. (`cookies.txt` git'e gönderilmez, kişiseldir.)
 - yt-dlp'yi ara sıra güncelle: `yt-dlp -U` (YouTube değişikliklerine ayak uydurur).
 - Port değiştirmek için: `PORT=8080 npm start`.
 
