@@ -36,7 +36,8 @@ function run(cmd, args, { timeoutMs = 0, onLine = null } = {}) {
     if (timeoutMs > 0) {
       timer = setTimeout(() => {
         child.kill('SIGKILL');
-        reject(new Error(`Proses ${cmd} vaxt ashdi (${timeoutMs} ms)`));
+        const dk = Math.round(timeoutMs / 60000);
+        reject(new Error(`Endirme ${dk} deqiqede bitmedi (cox yavash internet ya da cox boyuk fayl). Daha ashagi keyfiyyet (mes. 1080p) ya da daha qisa aralig sinayin.`));
       }, timeoutMs);
     }
     child.stdout.on('data', (d) => {
@@ -208,6 +209,9 @@ async function processJob(jobId, { url, quality, format, title, browser, segment
       '--no-playlist',
       '--no-warnings',
       '--newline', // faiz setir-setir gelsin
+      // YouTube tek baglantini yavashladir (throttle). Paralel fraqmentlerle
+      // endirme sur'etini bir nece defe artiririq — 15 deq. timeout problemi ucun.
+      '--concurrent-fragments', '5',
       ...cookies, // YouTube bot yoxlamasi ucun brauzer cookie-leri
       '--download-sections', `*${toTimestamp(start)}-${toTimestamp(end)}`,
     ];
@@ -220,7 +224,7 @@ async function processJob(jobId, { url, quality, format, title, browser, segment
     args.push('-o', outTemplate, url);
 
     await run('yt-dlp', args, {
-      timeoutMs: 15 * 60_000,
+      timeoutMs: 30 * 60_000,
       onLine: (line) => {
         const m = line.match(/\[download\]\s+([\d.]+)%/);
         if (m) {
