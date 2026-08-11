@@ -100,6 +100,12 @@ function authError(sel) {
   return null;
 }
 
+// YouTube-un default istemcisi videonu bezen HLS (m3u8) kimi verir — o zaman
+// --download-sections "Destination"-da ilishir (0%-de qalir). "web" istemcisi
+// birbasha endirilen (progressive) format verir; parca-endirme etibarli ishleyir.
+// (Test edildi: web ile 1-2 saniyede endi; default/android bu videoda ilishirdi.)
+const YT_CLIENT_ARGS = ['--extractor-args', 'youtube:player_client=web'];
+
 // Fayl adi ucun tehlukesiz metn (basliqdan) — sistemde qadagan simvollari sil.
 function safeFileName(name) {
   return String(name || '')
@@ -118,7 +124,7 @@ app.post('/api/info', async (req, res) => {
   try {
     const { stdout } = await run(
       'yt-dlp',
-      ['--dump-single-json', '--no-playlist', '--no-warnings', ...authArgs(req.body?.browser), url],
+      ['--dump-single-json', '--no-playlist', '--no-warnings', ...YT_CLIENT_ARGS, ...authArgs(req.body?.browser), url],
       { timeoutMs: 60_000 },
     );
     const info = JSON.parse(stdout);
@@ -188,12 +194,13 @@ async function processJob(jobId, { url, quality, format, title, browser, segment
 
   const allowedHeights = new Set(['360', '480', '720', '1080', '1440', '2160']);
   const height = quality === 'best' ? null : (allowedHeights.has(quality) ? quality : null);
-  // H.264 (avc1) mp4 + m4a ses tercih edilir: parca endirmede AV1/VP9-den cox daha
-  // sur'etli ve etibarli, hemcinin YouTube-a yeniden yukleme ucun daha uygun.
-  // Tapilmasa adi bestvideo+bestaudio-ya geri donur.
+  // web istemcisi esasen "progressive" (video+ses tek fayl) formatlar verir —
+  // bunlarin parca-endirmesi etibarlidir. Evvel DASH (bestvideo+bestaudio) sinanirdi,
+  // amma o, HLS kimi gelib "Destination"-da ilishirdi. Indi en yaxshi ishleyen
+  // progressive mp4 secilir; DASH varsa ve ishleyirse ona da geri donus saxlanir.
   const formatArg = height
-    ? `bestvideo[height<=${height}][vcodec^=avc1]+bestaudio[acodec^=mp4a]/bestvideo[height<=${height}][ext=mp4]+bestaudio/bestvideo[height<=${height}]+bestaudio/best[height<=${height}]/best`
-    : `bestvideo[vcodec^=avc1]+bestaudio[acodec^=mp4a]/bestvideo[ext=mp4]+bestaudio/bestvideo*+bestaudio/best`;
+    ? `best[height<=${height}][ext=mp4]/best[height<=${height}]/bestvideo[height<=${height}]+bestaudio/best`
+    : `best[ext=mp4]/best/bestvideo*+bestaudio/best`;
 
   const jobDir = path.join(TMP_ROOT, jobId);
   await mkdir(jobDir, { recursive: true });
@@ -212,6 +219,7 @@ async function processJob(jobId, { url, quality, format, title, browser, segment
       '--no-playlist',
       '--no-warnings',
       '--newline', // faiz setir-setir gelsin
+      ...YT_CLIENT_ARGS, // web istemci: HLS ilishmesini onleyir
       // YouTube tek baglantini yavashladir (throttle). Paralel fraqmentlerle
       // endirme sur'etini bir nece defe artiririq — 15 deq. timeout problemi ucun.
       '--concurrent-fragments', '5',
