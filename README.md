@@ -80,6 +80,7 @@ Sonra tarayıcıda aç: **http://localhost:4545**
 
 - İlk kez ağır/uzun bir aralık biraz sürebilir (yt-dlp `--force-keyframes-at-cuts` ile tam noktadan keser).
 - Bazı videolar bölge/yaş kısıtlamalı olabilir; o zaman yt-dlp indiremez.
+- **"Sign in to confirm you're not a bot" hatası** alırsan: sayfadaki **"Brauzer cookie-leri"** menüsünden YouTube'a giriş yaptığın tarayıcıyı (Chrome/Edge/Firefox…) seç. Araç o tarayıcının çerezleriyle indirir. Chrome/Edge'de bazen tarayıcının **tamamen kapalı** olması gerekir (çerez dosyası kilitli olmasın).
 - yt-dlp'yi ara sıra güncelle: `yt-dlp -U` (YouTube değişikliklerine ayak uydurur).
 - Port değiştirmek için: `PORT=8080 npm start`.
 

@@ -77,6 +77,14 @@ function toTimestamp(seconds) {
   return `${hh}:${mm}:${ss}`;
 }
 
+// YouTube "bot deyilsen tesdiqle" xetasi ucun: brauzerdeki cookie-leri istifade et.
+// Yalniz tehlukesiz siyahidan brauzer adini qebul edirik (komanda injection olmasin).
+const ALLOWED_BROWSERS = new Set(['chrome', 'edge', 'firefox', 'brave', 'opera', 'chromium', 'vivaldi', 'safari']);
+function cookieArgs(browser) {
+  const b = String(browser || '').trim().toLowerCase();
+  return ALLOWED_BROWSERS.has(b) ? ['--cookies-from-browser', b] : [];
+}
+
 // Fayl adi ucun tehlukesiz metn (basliqdan) — sistemde qadagan simvollari sil.
 function safeFileName(name) {
   return String(name || '')
@@ -93,7 +101,7 @@ app.post('/api/info', async (req, res) => {
   try {
     const { stdout } = await run(
       'yt-dlp',
-      ['--dump-single-json', '--no-playlist', '--no-warnings', url],
+      ['--dump-single-json', '--no-playlist', '--no-warnings', ...cookieArgs(req.body?.browser), url],
       { timeoutMs: 60_000 },
     );
     const info = JSON.parse(stdout);
@@ -136,6 +144,7 @@ app.post('/api/cut/start', async (req, res) => {
   const quality = String(req.body?.quality || 'best');
   const format = String(req.body?.format || 'video'); // 'video' | 'audio'
   const title = safeFileName(req.body?.title);
+  const browser = req.body?.browser;
   if (!url) return res.status(400).json({ error: 'Link boshdur.' });
 
   const parsed = parseSegments(req.body);
@@ -146,16 +155,17 @@ app.post('/api/cut/start', async (req, res) => {
   res.json({ jobId });
 
   // Arxada ishle (cavabi gozletme).
-  processJob(jobId, { url, quality, format, title, segments: parsed.segments })
+  processJob(jobId, { url, quality, format, title, browser, segments: parsed.segments })
     .catch((err) => {
       const job = jobs.get(jobId);
       if (job) { job.error = err.message; job.done = true; }
     });
 });
 
-async function processJob(jobId, { url, quality, format, title, segments }) {
+async function processJob(jobId, { url, quality, format, title, browser, segments }) {
   const job = jobs.get(jobId);
   const isAudio = format === 'audio';
+  const cookies = cookieArgs(browser);
 
   const allowedHeights = new Set(['360', '480', '720', '1080', '1440', '2160']);
   const height = quality === 'best' ? null : (allowedHeights.has(quality) ? quality : null);
@@ -180,6 +190,7 @@ async function processJob(jobId, { url, quality, format, title, segments }) {
       '--no-playlist',
       '--no-warnings',
       '--newline', // faiz setir-setir gelsin
+      ...cookies, // YouTube bot yoxlamasi ucun brauzer cookie-leri
       '--download-sections', `*${toTimestamp(start)}-${toTimestamp(end)}`,
     ];
     if (isAudio) {
