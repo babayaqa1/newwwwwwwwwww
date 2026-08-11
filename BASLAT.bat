@@ -22,6 +22,18 @@ if errorlevel 1 (
   exit /b 1
 )
 
+REM --- Avtomatik yenile (git ile qurulubsa) ---
+REM Bu qovluq git ile klonlanibsa, her achilishda son versiyani cekir.
+REM Boylece bir daha ZIP endirmeye ehtiyac yoxdur.
+if exist ".git" (
+  where git >nul 2>nul
+  if not errorlevel 1 (
+    echo   Son versiya yoxlanilir...
+    git pull --quiet
+    if errorlevel 1 echo   [DIQQET] Yenileme alinmadi - kohne versiya ile davam edilir.
+  )
+)
+
 REM --- yt-dlp / ffmpeg xeberdarligi (blok etmir) ---
 where yt-dlp >nul 2>nul
 if errorlevel 1 echo   [DIQQET] yt-dlp tapilmadi - indirme ishlemeyecek. README-ya bax.

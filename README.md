@@ -65,6 +65,23 @@ Sonra tarayıcıda aç: **http://localhost:4545**
 
 ---
 
+## Otomatik güncelleme (bir daha ZIP indirme!)
+
+ZIP yerine **bir kez git ile kur** — sonra `BASLAT.bat` her açılışta son sürümü kendisi çeker.
+
+**Tek seferlik kurulum:**
+1. Git'i kur: PowerShell'de `winget install Git.Git` (sonra PowerShell'i yeniden aç)
+2. Projeyi klonla (istediğin klasörde, örn. Masaüstü):
+   ```powershell
+   cd "$HOME\Desktop"
+   git clone https://github.com/babayaqa1/newwwwwwwwwww
+   ```
+3. Oluşan `newwwwwwwwwww` klasörüne gir → **`BASLAT.bat`**'a çift tıkla
+
+Bundan sonra: **sadece `BASLAT.bat`'a çift tıkla.** İçindeki `git pull` en son sürümü otomatik indirir — ZIP derdi biter. (Senin `cookies.txt` dosyan ve indirdiğin videolar güncellemeden etkilenmez, git onlara dokunmaz.)
+
+---
+
 ## Nasıl istifadə edilir
 
 1. YouTube linkini yapıştır, **"Melumati al"**a bas.

@@ -146,6 +146,18 @@
       font-size: 20px; line-height: 1; padding: 0 2px; width: auto;
     }
     .seg-item .del:hover { color: var(--accent-2); }
+    .seg-item .edit, .seg-item .ok {
+      background: none; border: none; cursor: pointer;
+      font-size: 16px; line-height: 1; padding: 0 3px; width: auto;
+    }
+    .seg-item .edit { color: var(--muted); }
+    .seg-item .edit:hover { color: var(--text); }
+    .seg-item .ok { color: var(--ok); font-weight: 700; }
+    .seg-item .edit-in {
+      flex: 1; background: var(--card); border: 1px solid var(--accent);
+      color: var(--text); border-radius: 8px; padding: 7px 10px;
+      font-size: 14px; font-variant-numeric: tabular-nums; width: auto;
+    }
     .seg-empty { color: var(--muted); font-size: 13px; text-align: center; padding: 6px 0; }
     .seg-total {
       display: flex; justify-content: space-between; color: var(--muted);
@@ -311,7 +323,30 @@
     let startSec = 0;
     let endSec = 60;
     let segments = [];       // [{start, end}]
+    let segUrl = '';         // segments hansi linke aiddir
     let format = 'video';    // 'video' | 'audio'
+    let editIndex = -1;      // hansi parca duzenlenir (-1 = hec biri)
+
+    // Sechilen araliqlar brauzerde saxlanir — sehife baglanib acilsa da qalir.
+    const STORE = 'yt-parca-kesici';
+    function save() {
+      try {
+        localStorage.setItem(STORE, JSON.stringify({ url: $('url').value.trim(), segUrl, segments }));
+      } catch (e) { /* localStorage bloklanibsa problem deyil */ }
+    }
+    function load() {
+      try {
+        const raw = localStorage.getItem(STORE);
+        if (!raw) return;
+        const d = JSON.parse(raw);
+        if (d.url) $('url').value = d.url;
+        if (Array.isArray(d.segments) && d.segments.length) {
+          segments = d.segments;
+          segUrl = d.segUrl || '';
+          renderList();
+        }
+      } catch (e) { /* xarab data — burax */ }
+    }
 
     // "1:30" / "01:30" / "1:04:00" -> saniye
     function parseTime(str) {
@@ -395,6 +430,7 @@
       if (segments.length === 0) {
         list.innerHTML = '<div class="seg-empty">Hele parca elave edilmeyib. Yuxaridan aralig secib <b>+</b> bas.</div>';
         $('segTotal').classList.add('hidden');
+        editIndex = -1;
         return;
       }
       let total = 0;
@@ -402,26 +438,80 @@
         total += seg.end - seg.start;
         const row = document.createElement('div');
         row.className = 'seg-item';
-        row.innerHTML =
-          `<span class="num">${i + 1}</span>` +
-          `<span class="time">${fmt(seg.start)} – ${fmt(seg.end)}</span>` +
-          `<span class="dur">${fmt(seg.end - seg.start)}</span>` +
-          `<button class="del" title="Sil" data-i="${i}">×</button>`;
+        if (i === editIndex) {
+          // Duzenleme modu: vaxti satirda deyish
+          row.innerHTML =
+            `<span class="num">${i + 1}</span>` +
+            `<input type="text" class="edit-in" value="${fmt(seg.start)}-${fmt(seg.end)}" />` +
+            `<button class="ok" title="Yadda saxla" data-ok="${i}">✓</button>` +
+            `<button class="del" title="Legv et" data-cancel="1">×</button>`;
+        } else {
+          row.innerHTML =
+            `<span class="num">${i + 1}</span>` +
+            `<span class="time">${fmt(seg.start)} – ${fmt(seg.end)}</span>` +
+            `<span class="dur">${fmt(seg.end - seg.start)}</span>` +
+            `<button class="edit" title="Duzenle" data-edit="${i}">✎</button>` +
+            `<button class="del" title="Sil" data-i="${i}">×</button>`;
+        }
         list.appendChild(row);
       });
-      list.querySelectorAll('.del').forEach((b) => {
-        b.addEventListener('click', () => { segments.splice(Number(b.dataset.i), 1); renderList(); });
-      });
+
+      // Duzenle
+      list.querySelectorAll('.edit').forEach((b) =>
+        b.addEventListener('click', () => { editIndex = Number(b.dataset.edit); renderList(); }));
+      // Yadda saxla
+      list.querySelectorAll('.ok').forEach((b) =>
+        b.addEventListener('click', () => saveEdit(Number(b.dataset.ok))));
+      // Sil / legv et
+      list.querySelectorAll('.del').forEach((b) =>
+        b.addEventListener('click', () => {
+          if (b.dataset.cancel) { editIndex = -1; renderList(); return; }
+          segments.splice(Number(b.dataset.i), 1); editIndex = -1; renderList(); save();
+        }));
+      // Duzenleme inputuna fokus + Enter/Escape
+      const inp = list.querySelector('.edit-in');
+      if (inp) {
+        inp.focus();
+        inp.setSelectionRange(inp.value.length, inp.value.length);
+        inp.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') saveEdit(editIndex);
+          else if (e.key === 'Escape') { editIndex = -1; renderList(); }
+        });
+      }
+
       $('segTotal').classList.remove('hidden');
       $('segCount').textContent = `${segments.length} parca`;
       $('segDurSum').textContent = fmt(total);
+    }
+
+    // Duzenleme modunda vaxti yadda saxla
+    function saveEdit(i) {
+      const inp = $('segList').querySelector('.edit-in');
+      const st = $('cutStatus');
+      if (!inp) return;
+      const parts = inp.value.trim().split('-');
+      if (parts.length !== 2) { st.className = 'status err'; st.textContent = 'Format sehvdir. Numune: 04:00-05:20'; return; }
+      const s = parseTime(parts[0]);
+      const e = parseTime(parts[1]);
+      if (!Number.isFinite(s) || !Number.isFinite(e) || e <= s) {
+        st.className = 'status err'; st.textContent = 'Vaxt sehvdir. Numune: 04:00-05:20'; return;
+      }
+      let ss = Math.max(0, s), ee = e;
+      if (videoDuration) { ss = Math.min(ss, videoDuration - 1); ee = Math.min(ee, videoDuration); }
+      segments[i] = { start: ss, end: ee };
+      editIndex = -1;
+      renderList();
+      save();
+      st.className = 'status ok'; st.textContent = 'Deyishiklik yadda saxlanildi.';
     }
 
     $('addBtn').addEventListener('click', () => {
       applyTextRange({ silent: true });
       if (endSec <= startSec) return;
       segments.push({ start: startSec, end: endSec });
+      segUrl = $('url').value.trim();
       renderList();
+      save();
       const st = $('cutStatus');
       st.className = 'status ok';
       st.textContent = `Elave edildi: ${fmt(startSec)} – ${fmt(endSec)}`;
@@ -446,7 +536,9 @@
         videoTitle = data.title || 'parca';
         startSec = 0;
         endSec = Math.min(60, videoDuration);
-        segments = [];
+        // Ferqli video secilibse siyahini temizle; eyni videodursa saxlanmish parcalar qalsin.
+        if (segUrl !== url) { segments = []; segUrl = url; }
+        save();
 
         $('vidTitle').textContent = data.title;
         $('vidUploader').textContent = data.uploader || 'Kanal';
@@ -541,6 +633,7 @@
 
     setFormat('video');
     render();
+    load(); // saxlanmish link ve araliqlari geri getir
   </script>
 </body>
 </html>
