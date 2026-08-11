@@ -218,8 +218,10 @@ async function processJob(jobId, { url, quality, format, title, browser, segment
     if (isAudio) {
       args.push('-f', 'bestaudio/best', '--extract-audio', '--audio-format', 'mp3', '--audio-quality', '0');
     } else {
-      // deqiq kesim (birleshmede uc-uca oturmesi ucun vacibdir)
-      args.push('--force-keyframes-at-cuts', '-f', formatArg, '--merge-output-format', 'mp4');
+      // Qeyd: evvel --force-keyframes-at-cuts vardi (frame-deqiq kesim ucun), amma o,
+      // videonu yeniden kodlashdirir — cox yavash olur ve faiz 0%-de ilishir. Onu cixardiq;
+      // kesim en yaxin keyframe-den bashlayir (bir nece saniye ferq), amma sur'etli ve faiz ishleyir.
+      args.push('-f', formatArg, '--merge-output-format', 'mp4');
     }
     args.push('-o', outTemplate, url);
 
