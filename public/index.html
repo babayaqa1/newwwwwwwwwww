@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>YouTube Parca Kesici</title>
+  <style>
+    :root {
+      --bg: #0f1115;
+      --card: #191c24;
+      --card-2: #21252f;
+      --line: #2b3040;
+      --text: #e8eaf0;
+      --muted: #9aa1b2;
+      --accent: #ff3b3b;
+      --accent-2: #ff5c5c;
+      --ok: #2fbf71;
+      --radius: 14px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: radial-gradient(1200px 600px at 50% -10%, #1b1f2b 0%, var(--bg) 60%);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 32px 16px 64px;
+    }
+    .wrap { max-width: 680px; margin: 0 auto; }
+    header { text-align: center; margin-bottom: 28px; }
+    .logo {
+      display: inline-flex; align-items: center; gap: 10px;
+      font-size: 26px; font-weight: 800; letter-spacing: -0.5px;
+    }
+    .logo .play {
+      width: 34px; height: 34px; border-radius: 9px;
+      background: var(--accent); display: grid; place-items: center;
+    }
+    .logo .play::after {
+      content: ""; width: 0; height: 0;
+      border-left: 11px solid #fff;
+      border-top: 7px solid transparent; border-bottom: 7px solid transparent;
+      margin-left: 3px;
+    }
+    header p { color: var(--muted); margin: 8px 0 0; font-size: 14px; }
+
+    .card {
+      background: var(--card); border: 1px solid var(--line);
+      border-radius: var(--radius); padding: 20px; margin-bottom: 18px;
+    }
+    label { display: block; font-size: 13px; color: var(--muted); margin: 0 0 7px; font-weight: 600; }
+    input[type="text"], select {
+      width: 100%; background: var(--card-2); border: 1px solid var(--line);
+      color: var(--text); border-radius: 10px; padding: 13px 14px; font-size: 15px;
+      outline: none; transition: border-color .15s;
+    }
+    input[type="text"]:focus, select:focus { border-color: var(--accent); }
+
+    button {
+      cursor: pointer; border: none; border-radius: 10px; font-weight: 700;
+      font-size: 15px; padding: 13px 18px; transition: transform .06s, background .15s;
+    }
+    button:active { transform: translateY(1px); }
+    button:disabled { opacity: .55; cursor: not-allowed; }
+    .btn-primary { background: var(--accent); color: #fff; width: 100%; }
+    .btn-primary:hover:not(:disabled) { background: var(--accent-2); }
+    .btn-ghost { background: var(--card-2); color: var(--text); border: 1px solid var(--line); width: 100%; }
+    .btn-ghost:hover:not(:disabled) { border-color: var(--accent); }
+
+    .info { display: none; gap: 14px; align-items: center; }
+    .info.show { display: flex; }
+    .info img { width: 120px; height: 68px; object-fit: cover; border-radius: 9px; flex-shrink: 0; }
+    .info h3 { margin: 0 0 5px; font-size: 15px; line-height: 1.3; }
+    .info .meta { color: var(--muted); font-size: 13px; }
+
+    .hint { color: var(--muted); font-size: 12px; margin-top: 6px; }
+    .section-title { font-size: 15px; font-weight: 700; margin: 0 0 16px; }
+
+    /* --- Zaman cizelgesi (iki tutamacli slayder) --- */
+    .timeline { position: relative; height: 42px; margin: 6px 2px 0; }
+    .timeline .base {
+      position: absolute; top: 50%; left: 0; right: 0; height: 7px;
+      transform: translateY(-50%); background: var(--card-2);
+      border-radius: 4px; border: 1px solid var(--line);
+    }
+    .timeline .range {
+      position: absolute; top: 50%; height: 7px;
+      transform: translateY(-50%); background: var(--accent);
+      border-radius: 4px; pointer-events: none;
+    }
+    .timeline input[type="range"] {
+      position: absolute; top: 0; left: 0; width: 100%; height: 42px; margin: 0;
+      background: none; pointer-events: none;
+      -webkit-appearance: none; appearance: none;
+    }
+    .timeline input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none; pointer-events: auto; cursor: grab;
+      width: 20px; height: 20px; border-radius: 50%;
+      background: #fff; border: 3px solid var(--accent);
+      box-shadow: 0 2px 7px rgba(0,0,0,.5);
+    }
+    .timeline input[type="range"]::-webkit-slider-thumb:active { cursor: grabbing; }
+    .timeline input[type="range"]::-moz-range-thumb {
+      pointer-events: auto; cursor: grab;
+      width: 20px; height: 20px; border-radius: 50%;
+      background: #fff; border: 3px solid var(--accent);
+      box-shadow: 0 2px 7px rgba(0,0,0,.5);
+    }
+    .timeline input[type="range"]::-webkit-slider-runnable-track { background: none; border: none; }
+    .timeline input[type="range"]::-moz-range-track { background: none; border: none; }
+    .tl-labels {
+      display: flex; justify-content: space-between;
+      color: var(--muted); font-size: 12px; margin-top: 2px;
+    }
+    .tl-badge {
+      display: inline-block; background: var(--card-2); border: 1px solid var(--line);
+      border-radius: 7px; padding: 3px 9px; color: var(--text);
+      font-weight: 700; font-variant-numeric: tabular-nums;
+    }
+
+    /* --- Parca siyahisi --- */
+    .seg-list { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+    .seg-item {
+      display: flex; align-items: center; gap: 11px;
+      background: var(--card-2); border: 1px solid var(--line);
+      border-radius: 10px; padding: 10px 12px;
+    }
+    .seg-item .num {
+      width: 22px; height: 22px; border-radius: 50%; background: var(--accent);
+      color: #fff; display: grid; place-items: center; font-size: 12px;
+      font-weight: 700; flex-shrink: 0;
+    }
+    .seg-item .time { font-weight: 700; font-variant-numeric: tabular-nums; }
+    .seg-item .dur { color: var(--muted); font-size: 12px; margin-left: auto; }
+    .seg-item .del {
+      background: none; border: none; color: var(--muted); cursor: pointer;
+      font-size: 20px; line-height: 1; padding: 0 2px; width: auto;
+    }
+    .seg-item .del:hover { color: var(--accent-2); }
+    .seg-empty { color: var(--muted); font-size: 13px; text-align: center; padding: 6px 0; }
+    .seg-total {
+      display: flex; justify-content: space-between; color: var(--muted);
+      font-size: 13px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line);
+    }
+    .seg-total b { color: var(--text); font-variant-numeric: tabular-nums; }
+
+    .status { margin-top: 14px; font-size: 14px; min-height: 20px; }
+    .status.err { color: var(--accent-2); }
+    .status.ok { color: var(--ok); }
+    .status.load { color: var(--muted); }
+
+    .spinner {
+      display: inline-block; width: 15px; height: 15px; vertical-align: -2px;
+      border: 2px solid var(--line); border-top-color: var(--accent);
+      border-radius: 50%; animation: spin .7s linear infinite; margin-left: 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    footer { text-align: center; color: var(--muted); font-size: 12px; margin-top: 28px; line-height: 1.7; }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="logo"><span class="play"></span> Parca Kesici</div>
+      <p>Videodan bir nece deqiqe araligi sec, birleshdir ve tek video kimi yukle</p>
+    </header>
+
+    <!-- 1. Link -->
+    <div class="card">
+      <label for="url">YouTube linki</label>
+      <input type="text" id="url" placeholder="https://www.youtube.com/watch?v=..." autocomplete="off" />
+      <button class="btn-ghost" id="infoBtn" style="margin-top:12px;">Melumati al</button>
+      <div class="status" id="infoStatus"></div>
+
+      <div class="info" id="infoBox" style="margin-top:14px;">
+        <img id="thumb" alt="" />
+        <div>
+          <h3 id="vidTitle"></h3>
+          <div class="meta"><span id="vidUploader"></span> · Uzunluq: <span id="vidDuration"></span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. Aralig sec + siyahi -->
+    <div class="card" id="cutCard" style="opacity:.5; pointer-events:none;">
+      <div class="section-title">Aralig sec — <span class="tl-badge" id="rangeBadge">00:00 – 01:00</span></div>
+
+      <!-- Zaman cizelgesi -->
+      <div class="timeline" id="timeline">
+        <div class="base"></div>
+        <div class="range" id="rangeFill"></div>
+        <input type="range" id="startRange" min="0" max="60" value="0" step="1" aria-label="Bashlangic" />
+        <input type="range" id="endRange" min="0" max="60" value="60" step="1" aria-label="Son" />
+      </div>
+      <div class="tl-labels">
+        <span>0:00</span>
+        <span id="tlTotal">1:00</span>
+      </div>
+
+      <!-- Elle yazma -->
+      <div style="margin-top:16px;">
+        <label for="rangeInput">Ve ya elle yaz</label>
+        <input type="text" id="rangeInput" placeholder="04:00-05:20" value="00:00-01:00" />
+        <div class="hint">Format: <b>bashlangic-son</b>, numune: <b>04:00-05:20</b>. Saat ucun: <b>1:04:00-1:05:20</b>.</div>
+      </div>
+
+      <button class="btn-ghost" id="addBtn" style="margin-top:14px;">+  Araligi listeye elave et</button>
+
+      <!-- Elave edilen parcalar -->
+      <div class="seg-list" id="segList">
+        <div class="seg-empty" id="segEmpty">Hele parca elave edilmeyib. Yuxaridan aralig secib <b>+</b> bas.</div>
+      </div>
+      <div class="seg-total hidden" id="segTotal">
+        <span id="segCount">0 parca</span>
+        <span>Umumi: <b id="segDurSum">0:00</b></span>
+      </div>
+
+      <!-- Keyfiyyet -->
+      <div style="margin-top:18px;">
+        <label for="quality">Keyfiyyet</label>
+        <select id="quality">
+          <option value="best" selected>Ən yüksək (avtomatik)</option>
+          <option value="2160">2160p (4K)</option>
+          <option value="1440">1440p (2K)</option>
+          <option value="1080">1080p (Full HD)</option>
+          <option value="720">720p (HD)</option>
+          <option value="480">480p</option>
+          <option value="360">360p</option>
+        </select>
+      </div>
+
+      <button class="btn-primary" id="cutBtn" style="margin-top:18px;">Kes, birleshdir ve yukle</button>
+      <div class="status" id="cutStatus"></div>
+    </div>
+
+    <footer>
+      Alet lokal ishleyir — fayllar oz kompyuterine yuklenir.<br />
+      Yalniz oz kontentin ya da icaze verilen videolarla istifade et.
+    </footer>
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+
+    // Veziyyet
+    let videoDuration = 60; // saniye
+    let videoTitle = 'parca';
+    let startSec = 0;
+    let endSec = 60;
+    let segments = []; // [{start, end}]
+
+    // "1:30" / "01:30" / "1:04:00" -> saniye
+    function parseTime(str) {
+      const parts = String(str).trim().split(':').map((p) => Number(p));
+      if (!parts.length || parts.some((n) => !Number.isFinite(n) || n < 0)) return NaN;
+      if (parts.length === 1) return parts[0];
+      if (parts.length === 2) return parts[0] * 60 + parts[1];
+      if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+      return NaN;
+    }
+    function fmt(sec) {
+      sec = Math.max(0, Math.floor(sec));
+      const h = Math.floor(sec / 3600);
+      const m = Math.floor((sec % 3600) / 60);
+      const s = sec % 60;
+      const p = (n) => String(n).padStart(2, '0');
+      return h > 0 ? `${h}:${p(m)}:${p(s)}` : `${p(m)}:${p(s)}`;
+    }
+
+    // --- Slayder + badge + elle-input yenile ---
+    function render({ skipInput = false } = {}) {
+      const sr = $('startRange'), er = $('endRange');
+      sr.max = er.max = videoDuration;
+      sr.value = startSec;
+      er.value = endSec;
+      $('rangeFill').style.left = (startSec / videoDuration) * 100 + '%';
+      $('rangeFill').style.width = ((endSec - startSec) / videoDuration) * 100 + '%';
+      $('rangeBadge').textContent = `${fmt(startSec)} – ${fmt(endSec)}`;
+      $('tlTotal').textContent = fmt(videoDuration);
+      if (!skipInput) $('rangeInput').value = `${fmt(startSec)}-${fmt(endSec)}`;
+    }
+
+    function onSlide(which) {
+      let s = Number($('startRange').value);
+      let e = Number($('endRange').value);
+      if (which === 'start' && s > e - 1) s = e - 1;
+      if (which === 'end' && e < s + 1) e = s + 1;
+      startSec = Math.max(0, s);
+      endSec = Math.min(videoDuration, e);
+      render();
+    }
+    $('startRange').addEventListener('input', () => onSlide('start'));
+    $('endRange').addEventListener('input', () => onSlide('end'));
+
+    // Elle "04:00-05:20"; qaytarir: true = ugurlu
+    function applyTextRange({ silent = false } = {}) {
+      const raw = $('rangeInput').value.trim();
+      const st = $('cutStatus');
+      const err = (m) => { if (!silent) { st.className = 'status err'; st.textContent = m; } return false; };
+      const parts = raw.split('-');
+      if (parts.length !== 2) return err('Format sehvdir. Numune: 04:00-05:20');
+      const s = parseTime(parts[0]);
+      const e = parseTime(parts[1]);
+      if (!Number.isFinite(s) || !Number.isFinite(e)) return err('Vaxt sehvdir. Numune: 04:00-05:20');
+      if (e <= s) return err('Son vaxt bashlangicdan boyuk olmalidir.');
+      startSec = Math.min(Math.max(0, s), Math.max(0, videoDuration - 1));
+      endSec = Math.min(e, videoDuration);
+      if (!silent) { st.className = 'status'; st.textContent = ''; }
+      render({ skipInput: true });
+      return true;
+    }
+    $('rangeInput').addEventListener('change', () => applyTextRange());
+    $('rangeInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') applyTextRange(); });
+
+    // --- Parca siyahisi ---
+    function renderList() {
+      const list = $('segList');
+      list.innerHTML = '';
+      if (segments.length === 0) {
+        list.innerHTML = '<div class="seg-empty" id="segEmpty">Hele parca elave edilmeyib. Yuxaridan aralig secib <b>+</b> bas.</div>';
+        $('segTotal').classList.add('hidden');
+        return;
+      }
+      let total = 0;
+      segments.forEach((seg, i) => {
+        total += seg.end - seg.start;
+        const row = document.createElement('div');
+        row.className = 'seg-item';
+        row.innerHTML =
+          `<span class="num">${i + 1}</span>` +
+          `<span class="time">${fmt(seg.start)} – ${fmt(seg.end)}</span>` +
+          `<span class="dur">${fmt(seg.end - seg.start)}</span>` +
+          `<button class="del" title="Sil" data-i="${i}">×</button>`;
+        list.appendChild(row);
+      });
+      list.querySelectorAll('.del').forEach((b) => {
+        b.addEventListener('click', () => { segments.splice(Number(b.dataset.i), 1); renderList(); });
+      });
+      $('segTotal').classList.remove('hidden');
+      $('segCount').textContent = `${segments.length} parca`;
+      $('segDurSum').textContent = fmt(total);
+    }
+
+    $('addBtn').addEventListener('click', () => {
+      applyTextRange({ silent: true }); // yazilani da qebul et
+      if (endSec <= startSec) return;
+      segments.push({ start: startSec, end: endSec });
+      renderList();
+      const st = $('cutStatus');
+      st.className = 'status ok';
+      st.textContent = `Elave edildi: ${fmt(startSec)} – ${fmt(endSec)}`;
+    });
+
+    // --- Melumat al ---
+    $('infoBtn').addEventListener('click', async () => {
+      const url = $('url').value.trim();
+      const st = $('infoStatus');
+      if (!url) { st.className = 'status err'; st.textContent = 'Zehmet olmasa link yaz.'; return; }
+      st.className = 'status load'; st.innerHTML = 'Yuklenir <span class="spinner"></span>';
+      $('infoBtn').disabled = true;
+      try {
+        const r = await fetch('/api/info', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url }),
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Xeta');
+
+        videoDuration = Math.max(1, data.duration || 1);
+        videoTitle = data.title || 'parca';
+        startSec = 0;
+        endSec = Math.min(60, videoDuration);
+        segments = [];
+
+        $('vidTitle').textContent = data.title;
+        $('vidUploader').textContent = data.uploader || 'Kanal';
+        $('vidDuration').textContent = fmt(videoDuration);
+        if (data.thumbnail) { $('thumb').src = data.thumbnail; $('thumb').classList.remove('hidden'); }
+        else $('thumb').classList.add('hidden');
+        $('infoBox').classList.add('show');
+
+        $('cutCard').style.opacity = '1';
+        $('cutCard').style.pointerEvents = 'auto';
+        render();
+        renderList();
+
+        st.className = 'status ok'; st.textContent = 'Hazirdir. Indi araliqlari sec ve elave et.';
+      } catch (e) {
+        st.className = 'status err'; st.textContent = 'Xeta: ' + e.message;
+        $('infoBox').classList.remove('show');
+      } finally {
+        $('infoBtn').disabled = false;
+      }
+    });
+
+    // --- Kes, birleshdir ve yukle ---
+    $('cutBtn').addEventListener('click', async () => {
+      const url = $('url').value.trim();
+      const st = $('cutStatus');
+
+      // Siyahi boshdursa, cari secimi tek parca kimi qebul et.
+      let toCut = segments.slice();
+      if (toCut.length === 0) {
+        applyTextRange({ silent: true });
+        if (endSec > startSec) toCut = [{ start: startSec, end: endSec }];
+      }
+      if (toCut.length === 0) {
+        st.className = 'status err'; st.textContent = 'En azi bir aralig elave et (+ dugmesi).'; return;
+      }
+
+      const many = toCut.length > 1;
+      st.className = 'status load';
+      st.innerHTML = many
+        ? `${toCut.length} parca kesilir ve birleshdirilir... bir nece deqiqe cheke biler <span class="spinner"></span>`
+        : `Kesilir (${fmt(toCut[0].start)}–${fmt(toCut[0].end)})... <span class="spinner"></span>`;
+      $('cutBtn').disabled = true;
+      try {
+        const r = await fetch('/api/cut', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url, segments: toCut, quality: $('quality').value, title: videoTitle }),
+        });
+        if (!r.ok) {
+          const data = await r.json().catch(() => ({}));
+          throw new Error(data.error || 'Server xetasi');
+        }
+        const blob = await r.blob();
+        const cd = r.headers.get('Content-Disposition') || '';
+        const m = cd.match(/filename\*?=(?:UTF-8''|")?([^";]+)/i);
+        const name = m ? decodeURIComponent(m[1].replace(/"/g, '')) : 'parca.mp4';
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = name;
+        document.body.appendChild(a); a.click(); a.remove();
+        URL.revokeObjectURL(a.href);
+        st.className = 'status ok';
+        st.textContent = many ? 'Hazirdir! Butun parcalar tek videoda yuklendi.' : 'Hazirdir! Fayl yuklendi.';
+      } catch (e) {
+        st.className = 'status err'; st.textContent = 'Xeta: ' + e.message;
+      } finally {
+        $('cutBtn').disabled = false;
+      }
+    });
+
+    $('url').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('infoBtn').click(); });
+
+    render();
+  </script>
+</body>
+</html>
