@@ -327,6 +327,18 @@ async function cleanupOldTemp() {
 await mkdir(TMP_ROOT, { recursive: true });
 await cleanupOldTemp();
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`\n  YouTube Parca Kesici ishleyir:  http://localhost:${PORT}\n`);
+});
+
+// Ikinci defe achilanda port artiq tutulu olur — qorxunc stack trace evezine
+// aydin mesaj ver (alet onsuz da bashqa pencerede ishleyir).
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.log(`\n  Alet ARTIQ ishleyir (port ${PORT}).`);
+    console.log(`  Brauzerde ac: http://localhost:${PORT}`);
+    console.log(`  Bu penceré lazim deyil — baglaya bilersen.\n`);
+    process.exit(0);
+  }
+  throw err;
 });
