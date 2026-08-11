@@ -188,9 +188,12 @@ async function processJob(jobId, { url, quality, format, title, browser, segment
 
   const allowedHeights = new Set(['360', '480', '720', '1080', '1440', '2160']);
   const height = quality === 'best' ? null : (allowedHeights.has(quality) ? quality : null);
+  // H.264 (avc1) mp4 + m4a ses tercih edilir: parca endirmede AV1/VP9-den cox daha
+  // sur'etli ve etibarli, hemcinin YouTube-a yeniden yukleme ucun daha uygun.
+  // Tapilmasa adi bestvideo+bestaudio-ya geri donur.
   const formatArg = height
-    ? `bestvideo[height<=${height}]+bestaudio/best[height<=${height}]/best`
-    : 'bestvideo*+bestaudio/best';
+    ? `bestvideo[height<=${height}][vcodec^=avc1]+bestaudio[acodec^=mp4a]/bestvideo[height<=${height}][ext=mp4]+bestaudio/bestvideo[height<=${height}]+bestaudio/best[height<=${height}]/best`
+    : `bestvideo[vcodec^=avc1]+bestaudio[acodec^=mp4a]/bestvideo[ext=mp4]+bestaudio/bestvideo*+bestaudio/best`;
 
   const jobDir = path.join(TMP_ROOT, jobId);
   await mkdir(jobDir, { recursive: true });
